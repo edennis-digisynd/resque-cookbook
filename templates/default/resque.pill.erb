@@ -1,0 +1,63 @@
+####################################################################
+# You can specify some queues that apply to just one worker each,
+# and some queues that apply to all workers
+
+  queues_for_all_workers = ['queue1', 'queue2']
+  queues_for_individual_workers = ['queue3', 'queue4']
+
+####################################################################
+
+app_name = "<%= @app_name %>"
+rails_env = "<%= @rails_env %>"
+owner_name = "<%= @owner_name %>"
+num_workers_from_recipe = "<%= @num_workers %>".to_i
+
+rake_command = "<%= @bundler ? "bundle exec rake" : "/usr/bin/rake" %> "
+
+min_num_workers = [queues_for_individual_workers.length, 1].max
+num_workers = [min_num_workers, num_workers_from_recipe].max
+
+initial_workers = queues_for_individual_workers.map do |arr|
+  Array(arr) + queues_for_all_workers
+end
+
+worker_queues = initial_workers +
+  Array.new(num_workers - initial_workers.length) { queues_for_all_workers }
+
+
+Bluepill.application("#{app_name}_resque", :log_file => "/var/log/bluepill.log") do |app|
+
+  app.uid = app.gid = owner_name
+
+  worker_queues.each_with_index do |queue, idx|
+    app.process("resque_worker_#{idx}") do |process|
+      process.group = 'resque'
+      process.pid_file = "/var/run/resque/#{app_name}/worker_#{idx}.pid"
+      process.working_dir = "/data/#{app_name}/current"
+      process.start_command = rake_command +
+        "RACK_ENV=#{rails_env} RAILS_ENV=#{rails_env} " +
+        "QUEUE=#{queue.join(',')} " +
+        "environment resque:work"
+      process.stop_command = <<-EOF
+      kill -QUIT {{PID}}
+      sleep_count=0
+      while [ -e /proc/{{PID}} ]; do
+        sleep 1
+        let "sleep_count+=1"
+        if [ $sleep_count -eq 60 ]; then
+          kill -TERM {{PID}}
+        fi
+        if [ $sleep_count -ge 70 ]; then
+          kill -KILL {{PID}}
+        fi
+      done
+      EOF
+      process.start_grace_time = 5.seconds
+      process.stop_grace_time = 75.seconds
+      process.restart_grace_time = 80.seconds
+      process.daemonize = true
+
+      process.checks :mem_usage, :below => 100.megabytes, :every => 1.minute, :times => 3
+    end
+  end
+end

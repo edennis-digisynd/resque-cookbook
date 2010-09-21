@@ -1,0 +1,18 @@
+h1. Resque Recipe using Bluepill
+
+h2. Installation steps
+
+# Copy resque directory to your app's cookbooks/ folder. If you do not have a cookbooks folder, you'll need to create one and copy over the "main" directory from "engineyard/ey-cloud-recipes":http://github.com/engineyard/ey-cloud-recipes
+# Customize the template on line 5 and 6 to meet your needs. Alternately, if you want all workers to run all queues, you may switch the recipe to use the @resque_all_queues.pill.erb@ template instead.
+# Customize the template's @mem_usage@ setting to be appropriate for your application.
+# Customize the recipe's @num_workers@ to meet your needs.
+# If you are using bundler, set @:bundler => true@ in the recipe to avoid issues invoking rake.
+# Add the after restart hook from @after_restart.rb@ to your @deploy/after_restart.rb@ file (create one if you don't have one). You can then delete this file from your local cookbook.
+# Add @require_recipe 'resque'@ to your @main/recipes/default.rb@.
+# Commit and push your changes.
+# Upload your recipe to your app by running @ey recipes upload -e environment_name@
+# Run @ey recipes apply@ to apply your custom recipes and then @ey deploy@ to deploy. If you are not using CLI deploys, a full deploy from the EY Cloud dashboard will have the same effect.
+
+h2. Troubleshooting
+
+There are no known issues at this time, presuming you follow all the steps above. Just make sure to set your queues, memory usage, number of workers, and bundler settings appropriately!
