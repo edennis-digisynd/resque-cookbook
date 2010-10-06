@@ -7,7 +7,7 @@ Bluepill.application("<%= @app %>_resque", :log_file => "/var/log/bluepill.log")
     <%= env[:workers] %>.times do |worker|
       app.process("<%= @app %>_workers_<%= env_index %>.#{worker}") do |process|
         process.group = "resque"
-        process.pid_file = "<%= @pids_path %>/worker_<%= env_index %>.#{worker}.pid"
+        process.pid_file = "<%= @pids_path %>/resque_workers_<%= env_index %>.#{worker}.pid"
         process.working_dir = "<%= @path %>/current"
         process.start_command = "cd <%= @path %>/current && <%= env[:args] %> <%= rake_command %> environment resque:work"
         process.stop_command = <<-EOF
